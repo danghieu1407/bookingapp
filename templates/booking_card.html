@@ -1,0 +1,23 @@
+<div class="booking-card">
+    <div class="booking-header">
+        <h4>{{ booking.service|title }} Booking</h4>
+        <span class="status {{ booking.status }}" x-text="{{ booking.status }}"></span>
+    </div>
+    <div class="booking-details">
+        <p><i class="fas fa-calendar"></i> <span>{{ booking.date }}</span></p>
+        <p><i class="fas fa-clock"></i> <span>{{ booking.time }}</span></p>
+        <p><i class="fas fa-user"></i> <span>{{ booking.name }}</span></p>
+        <p><i class="fas fa-envelope"></i> <span>{{ booking.email }}</span></p>
+    </div>
+    <div class="booking-actions">
+        <button class="action-btn edit" @click="editBooking({{ booking|tojson }})">
+            <i class="fas fa-edit"></i> Edit
+        </button>
+        <button class="action-btn cancel" 
+                hx-delete="/api/bookings/{{ booking.id }}"
+                hx-target="#bookings-grid"
+                hx-swap="outerHTML">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+    </div>
+</div>

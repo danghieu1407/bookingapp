@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking App</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container" x-data="bookingApp()">
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-calendar-check"></i> Booking App</h1>
+                <nav>
+                    <button class="nav-btn"
+                            :class="{ 'active': activeTab === 'booking' }"
+                            @click="activeTab = 'booking'; resetForm();">
+                        New Booking
+                    </button>
+                    <button class="nav-btn"
+                            :class="{ 'active': activeTab === 'my-bookings' }"
+                            @click="activeTab = 'my-bookings'">
+                        My Bookings
+                    </button>
+                </nav>
+                {% if google_avatar %}
+                <div class="user-avatar-dropdown" x-data="{ open: false }" style="position: relative; margin-left: 1.5rem;">
+                    <img src="{{ google_avatar }}" alt="Avatar" class="user-avatar" @click="open = !open" style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #eee;">
+                    <div x-show="open" @click.away="open = false" class="dropdown-menu" style="position: absolute; right: 0; top: 48px; background: #fff; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-width: 120px; z-index: 100;">
+                        <a href="/logout" class="dropdown-item" style="display: block; padding: 10px 16px; color: #333; text-decoration: none;">Logout</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if not google_avatar %}
+                <a href="/login/google" class="login-btn" style="margin-left: 1.5rem; padding: 8px 18px; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #333; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style="width: 20px; height: 20px;"> Sign in with Google
+                </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div x-show="activeTab === 'booking'" class="tab-content">
+                <div class="booking-container">
+                    <div class="booking-form">
+                        <h2 x-text="isEditMode ? 'Edit Booking' : 'Make a New Booking'"></h2>
+                        
+                        <div class="form-section">
+                            <h3>Select Service</h3>
+                            <div class="service-grid">
+                                <div class="service-card" 
+                                     :class="{ 'selected': selectedService === 'room' }"
+                                     @click="selectedService = 'room'">
+                                    <i class="fas fa-bed"></i>
+                                    <h4>Hotel Room</h4>
+                                    <p>Comfortable accommodation</p>
+                                    <span class="price">$150/night</span>
+                                </div>
+                                <div class="service-card" 
+                                     :class="{ 'selected': selectedService === 'meeting' }"
+                                     @click="selectedService = 'meeting'">
+                                    <i class="fas fa-users"></i>
+                                    <h4>Meeting Room</h4>
+                                    <p>Professional meeting space</p>
+                                    <span class="price">$75/hour</span>
+                                </div>
+                                <div class="service-card" 
+                                     :class="{ 'selected': selectedService === 'spa' }"
+                                     @click="selectedService = 'spa'">
+                                    <i class="fas fa-spa"></i>
+                                    <h4>Spa Treatment</h4>
+                                    <p>Relaxing wellness services</p>
+                                    <span class="price">$120/session</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Select Date & Time</h3>
+                            <div class="datetime-selection">
+                                <div class="date-picker">
+                                    <label>Date:</label>
+                                    <input type="date" x-model="selectedDate" 
+                                           :min="today" 
+                                           @change="updateAvailableSlots()">
+                                </div>
+                                <div class="time-picker">
+                                    <label>Time:</label>
+                                    <select x-model="selectedTime" 
+                                            :disabled="!selectedDate || availableSlots.length === 0">
+                                        <option value="" x-show="!isEditMode || !selectedTime">Select time</option>
+                                        <template x-for="slot in availableSlots" :key="slot">
+                                            <option :value="slot" x-text="slot" :disabled="bookings.some(b => b.date === selectedDate && b.time === slot && b.status !== 'cancelled' && (!isEditMode || b.id !== editingBookingId))"></option>
+                                        </template>
+                                        <option x-show="isEditMode && selectedTime && !availableSlots.includes(selectedTime)" :value="selectedTime" x-text="selectedTime"></option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Booking Details</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Name:</label>
+                                    <input type="text" x-model="bookingForm.name" 
+                                           placeholder="Your full name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email:</label>
+                                    <input type="email" x-model="bookingForm.email" 
+                                           placeholder="your@email.com" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone:</label>
+                                <input type="tel" x-model="bookingForm.phone" 
+                                       placeholder="Your phone number" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Special Requests:</label>
+                                <textarea x-model="bookingForm.notes" 
+                                          placeholder="Any special requirements or notes..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="booking-summary" x-show="selectedService && selectedDate && selectedTime">
+                            <h3>Booking Summary</h3>
+                            <div class="summary-item">
+                                <span>Service:</span>
+                                <span x-text="getServiceName(selectedService)"></span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Date:</span>
+                                <span x-text="formatDate(selectedDate)"></span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Time:</span>
+                                <span x-text="selectedTime"></span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Price:</span>
+                                <span x-text="getServicePrice(selectedService)"></span>
+                            </div>
+                        </div>
+
+                        <button class="submit-btn" 
+                                @click="submitBookingHTMX()"
+                                :disabled="!canSubmit()">
+                            <i class="fas fa-check"></i>
+                            <span x-text="isEditMode ? 'Update Booking' : 'Confirm Booking'"></span>
+                        </button>
+                    </div>
+
+                    <div class="slots-display" x-show="selectedDate">
+                        <h3>
+                            Available Slots for
+                            <span x-text="selectedDate === today ? 'Today' : formatDate(selectedDate)"></span>
+                        </h3>
+                        <div class="slots-grid">
+                            <template x-for="slot in availableSlots" :key="slot">
+                                <div class="slot-item"
+                                     :class="{
+                                        'selected': selectedTime === slot,
+                                        'disabled': bookings.some(b => b.date === selectedDate && b.time === slot && b.status !== 'cancelled' && (!isEditMode || b.id !== editingBookingId))
+                                     }"
+                                     @click="!bookings.some(b => b.date === selectedDate && b.time === slot && b.status !== 'cancelled' && (!isEditMode || b.id !== editingBookingId)) && (selectedTime = slot)">
+                                    <span x-text="slot"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="activeTab === 'my-bookings'" class="tab-content">
+                <div class="bookings-list">
+                    <h2>My Bookings</h2>
+                    <div class="bookings-grid" id="bookings-grid">
+                        <template x-for="booking in bookings" :key="booking.id">
+                            <div class="booking-card" :class="{ 'highlight': booking.highlight }">
+                                <div class="booking-header">
+                                    <h4 x-text="getServiceName(booking.service) + ' Booking'"></h4>
+                                    <span class="status" x-text="booking.status"></span>
+                                </div>
+                                <div class="booking-details">
+                                    <p><i class="fas fa-calendar"></i> <span x-text="booking.date"></span></p>
+                                    <p><i class="fas fa-clock"></i> <span x-text="booking.time"></span></p>
+                                    <p><i class="fas fa-user"></i> <span x-text="booking.name"></span></p>
+                                    <p><i class="fas fa-envelope"></i> <span x-text="booking.email"></span></p>
+                                </div>
+                                <div class="booking-actions">
+                                    <button class="action-btn edit" @click="editBooking(booking)">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="action-btn cancel" @click="openCancelModal(booking.id)">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="modal" x-show="showSuccessModal" x-transition>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-check-circle"></i> Booking Confirmed!</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Your booking has been successfully created. You will receive a confirmation email shortly.</p>
+                    <div class="booking-details">
+                        <p><strong>Booking ID:</strong> <span x-text="lastBookingId"></span></p>
+                        <p><strong>Service:</strong> <span x-text="getServiceName(lastBookingService)"></span></p>
+                        <p><strong>Date:</strong> <span x-text="formatDate(lastBookingDate)"></span></p>
+                        <p><strong>Time:</strong> <span x-text="lastBookingTime"></span></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="showSuccessModal = false; activeTab = 'my-bookings'">
+                        View My Bookings
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" x-show="showCancelModal" x-transition>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Confirm Cancellation</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this booking?</p>
+                </div>
+                <div class="modal-footer">
+                    <button @click="confirmCancelBooking()">Yes, Cancel</button>
+                    <button @click="showCancelModal = false">No, Go Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html> 
