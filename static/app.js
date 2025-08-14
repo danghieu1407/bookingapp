@@ -23,39 +23,7 @@ function bookingApp() {
         },
         
         bookings: [
-            {
-                id: 'BK001',
-                service: 'room',
-                date: '2024-01-15',
-                time: '14:00',
-                name: 'John Doe',
-                email: 'john@example.com',
-                phone: '+1-555-0123',
-                notes: 'Early check-in preferred',
-                status: 'confirmed'
-            },
-            {
-                id: 'BK002',
-                service: 'meeting',
-                date: '2024-01-20',
-                time: '10:00',
-                name: 'Jane Smith',
-                email: 'jane@example.com',
-                phone: '+1-555-0456',
-                notes: 'Need projector and whiteboard',
-                status: 'pending'
-            },
-            {
-                id: 'BK003',
-                service: 'spa',
-                date: '2024-01-25',
-                time: '16:00',
-                name: 'Mike Johnson',
-                email: 'mike@example.com',
-                phone: '+1-555-0789',
-                notes: 'Couples massage',
-                status: 'confirmed'
-            }
+            
         ],
         
         get today() {
@@ -63,8 +31,93 @@ function bookingApp() {
         },
         
         init() {
+            this.loadUserInfo();
             this.updateAvailableSlots();
             this.fetchBookings();
+            
+            this.checkForLoginSuccess();
+        },
+        
+        checkForLoginSuccess() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('login_success') || window.location.pathname.includes('authorized')) {
+                this.fetchUserInfo();
+                
+                if (urlParams.has('login_success')) {
+                    urlParams.delete('login_success');
+                    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                    window.history.replaceState({}, '', newUrl);
+                }
+            }
+        },
+        
+        loadUserInfo() {
+            let userInfo = null;
+            try {
+                const storedUserInfo = localStorage.getItem('userInfo');
+                if (storedUserInfo) {
+                    userInfo = JSON.parse(storedUserInfo);
+                }
+            } catch (error) {
+                console.error('Error reading user info from localStorage:', error);
+            }
+            
+            if (!userInfo) {
+                const container = document.querySelector('[data-user-info]');
+                if (container) {
+                    const dataUserInfo = container.getAttribute('data-user-info');
+                    if (dataUserInfo && dataUserInfo !== '{}') {
+                        try {
+                            userInfo = JSON.parse(dataUserInfo);
+                            if (userInfo && userInfo.name && userInfo.email) {
+                                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                            }
+                        } catch (error) {
+                            console.error('Error parsing user info from data attribute:', error);
+                        }
+                    }
+                }
+            }
+            
+            if (userInfo && userInfo.name && userInfo.email) {
+                this.bookingForm.name = userInfo.name;
+                this.bookingForm.email = userInfo.email;
+                
+                if (userInfo.picture) {
+                    this.updateAvatar(userInfo.picture);
+                }
+            }
+        },
+        
+        async fetchUserInfo() {
+            try {
+                const lastAvatarRefresh = localStorage.getItem('lastAvatarRefresh');
+                const now = Date.now();
+                const fiveMinutes = 5 * 60 * 1000;
+                
+                if (lastAvatarRefresh && (now - parseInt(lastAvatarRefresh)) < fiveMinutes) {
+                    console.log('Avatar refresh rate limited, using cached data');
+                    return;
+                }
+                
+                const response = await fetch('/api/user-info');
+                if (response.ok) {
+                    const userInfo = await response.json();
+                    if (userInfo.name && userInfo.email) {
+                        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                        this.bookingForm.name = userInfo.name;
+                        this.bookingForm.email = userInfo.email;
+                        
+                        if (userInfo.picture) {
+                            this.updateAvatar(userInfo.picture);
+                        }
+                        
+                        localStorage.setItem('lastAvatarRefresh', now.toString());
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+            }
         },
         
         async fetchBookings() {
@@ -180,9 +233,20 @@ function bookingApp() {
             this.selectedService = '';
             this.selectedDate = '';
             this.selectedTime = '';
+            
+            let userInfo = null;
+            try {
+                const storedUserInfo = localStorage.getItem('userInfo');
+                if (storedUserInfo) {
+                    userInfo = JSON.parse(storedUserInfo);
+                }
+            } catch (error) {
+                console.error('Error reading user info from localStorage:', error);
+            }
+            
             this.bookingForm = {
-                name: '',
-                email: '',
+                name: userInfo ? userInfo.name || '' : '',
+                email: userInfo ? userInfo.email || '' : '',
                 phone: '',
                 notes: ''
             };
@@ -324,6 +388,77 @@ function bookingApp() {
             setTimeout(() => {
                 element.classList.remove('success-animation');
             }, 500);
+        },
+
+        clearUserInfo() {
+            localStorage.removeItem('userInfo');
+            this.bookingForm.name = '';
+            this.bookingForm.email = '';
+            this.updateAvatar(null);
+        },
+        
+        updateAvatar(pictureUrl) {
+            var avatarContainer = document.querySelector('[x-data*="userAvatar"]');
+            if (avatarContainer && window.Alpine) {
+                try {
+                    var alpineData = Alpine.$data(avatarContainer);
+                    if (alpineData && typeof alpineData.userAvatar !== 'undefined') {
+                        alpineData.userAvatar = pictureUrl;
+                    }
+                } catch (error) {
+                    console.error('Error updating avatar:', error);
+                }
+            }
+        }
+    };
+}
+
+function avatarComponent() {
+    return {
+        userAvatar: null,
+        
+        init() {
+            this.initAvatar();
+        },
+        
+        initAvatar() {
+            let container = document.querySelector('[data-user-info]');
+            if (container) {
+                let dataUserInfo = container.getAttribute('data-user-info');
+                if (dataUserInfo && dataUserInfo !== '{}') {
+                    try {
+                        let userInfo = JSON.parse(dataUserInfo);
+                        if (userInfo.picture) {
+                            this.userAvatar = userInfo.picture;
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Error parsing user info:', error);
+                    }
+                }
+            }
+            
+            try {
+                let storedUserInfo = localStorage.getItem('userInfo');
+                if (storedUserInfo) {
+                    let userInfo = JSON.parse(storedUserInfo);
+                    if (userInfo.picture) {
+                        this.userAvatar = userInfo.picture;
+                    }
+                }
+            } catch (error) {
+                console.error('Error reading user info from localStorage:', error);
+            }
+        },
+        
+        getFallbackAvatar() {
+            return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiM2NjdlZWEiLz4KPHBhdGggZD0iTTIwIDIwQzIyLjc2MTQgMjAgMjUgMTcuNzYxNCAyNSAxNUMyNSAxMi4yMzg2IDIyLjc2MTQgMTAgMjAgMTBDMTcuMjM4NiAxMCAxNSAxMi4yMzg2IDE1IDE1QzE1IDE3Ljc2MTQgMTcuMjM4NiAyMCAyMCAyMFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yMCAyMkMxNi42ODYzIDIyIDE0IDI0LjY4NjMgMTQgMjhIMjZDMjYgMjQuNjg2MyAyMy4zMTM3IDIyIDIwIDIyWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+';
+        },
+        
+        handleAvatarError(event) {
+            console.warn('Avatar failed to load, using fallback');
+            event.target.src = this.getFallbackAvatar();
+            event.target.onerror = null;
         }
     };
 }
@@ -340,6 +475,7 @@ document.addEventListener('htmx:responseError', function(event) {
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('bookingApp', bookingApp);
+    Alpine.data('avatarComponent', avatarComponent);
 });
 
 function updateBookingsList(bookings) {

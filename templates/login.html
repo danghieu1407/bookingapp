@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Booking App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .login-header {
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .login-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 16px 24px;
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            border-color: #4285f4;
+        }
+        
+        .login-btn i {
+            font-size: 1.2rem;
+            color: #4285f4;
+        }
+        
+        .features {
+            margin-top: 40px;
+            text-align: left;
+        }
+        
+        .features h3 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            color: #666;
+        }
+        
+        .feature-item i {
+            color: #4285f4;
+            width: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1><i class="fas fa-calendar-check"></i></h1>
+                <h1>Welcome to Booking App</h1>
+                <p>Please sign in to continue to your booking dashboard</p>
+            </div>
+            
+            <a href="/login/google" class="login-btn">
+                <i class="fab fa-google"></i>
+                Sign in with Google
+            </a>
+            
+            <div class="features">
+                <h3>What you can do:</h3>
+                <div class="feature-item">
+                    <i class="fas fa-bed"></i>
+                    <span>Book hotel rooms and accommodations</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-users"></i>
+                    <span>Reserve meeting rooms</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-spa"></i>
+                    <span>Schedule spa treatments</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Manage your bookings</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

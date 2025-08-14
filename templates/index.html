@@ -10,7 +10,8 @@
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
-    <div class="container" x-data="bookingApp()">
+    <div class="container" x-data="bookingApp()" 
+         data-user-info='{% if user_info %}{{ user_info|tojson|safe }}{% else %}{}{% endif %}'>
         <header class="header">
             <div class="header-content">
                 <h1><i class="fas fa-calendar-check"></i> Booking App</h1>
@@ -26,19 +27,17 @@
                         My Bookings
                     </button>
                 </nav>
-                {% if google_avatar %}
-                <div class="user-avatar-dropdown" x-data="{ open: false }" style="position: relative; margin-left: 1.5rem;">
-                    <img src="{{ google_avatar }}" alt="Avatar" class="user-avatar" @click="open = !open" style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #eee;">
-                    <div x-show="open" @click.away="open = false" class="dropdown-menu" style="position: absolute; right: 0; top: 48px; background: #fff; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-width: 120px; z-index: 100;">
-                        <a href="/logout" class="dropdown-item" style="display: block; padding: 10px 16px; color: #333; text-decoration: none;">Logout</a>
+                <div x-data="avatarComponent()" 
+                     @avatar-update.window="userAvatar = $event.detail">
+                    <div x-show="userAvatar" class="user-avatar-dropdown" x-data="{ open: false }" style="position: relative; margin-left: 1.5rem;">
+                        <img :src="userAvatar" alt="Avatar" class="user-avatar" @click="open = !open" 
+                             @error="handleAvatarError($event)"
+                             style="width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid #eee;">
+                        <div x-show="open" @click.away="open = false" class="dropdown-menu" style="position: absolute; right: 0; top: 48px; background: #fff; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-width: 120px; z-index: 100;">
+                            <a href="/logout" class="dropdown-item" style="display: block; padding: 10px 16px; color: #333; text-decoration: none;" @click="clearUserInfo()">Logout</a>
+                        </div>
                     </div>
                 </div>
-                {% endif %}
-                {% if not google_avatar %}
-                <a href="/login/google" class="login-btn" style="margin-left: 1.5rem; padding: 8px 18px; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #333; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style="width: 20px; height: 20px;"> Sign in with Google
-                </a>
-                {% endif %}
             </div>
         </header>
 
